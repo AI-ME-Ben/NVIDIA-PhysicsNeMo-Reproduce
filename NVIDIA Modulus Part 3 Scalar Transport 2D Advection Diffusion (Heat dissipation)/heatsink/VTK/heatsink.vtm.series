@@ -1,0 +1,16 @@
+{
+  "file-series-version" : "1.0",
+  "files" : [
+    { "name" : "heatsink_0.vtm", "time" : 0 },
+    { "name" : "heatsink_1.vtm", "time" : 1 },
+    { "name" : "heatsink_2.vtm", "time" : 2 },
+    { "name" : "heatsink_3.vtm", "time" : 3 },
+    { "name" : "heatsink_4.vtm", "time" : 4 },
+    { "name" : "heatsink_5.vtm", "time" : 5 },
+    { "name" : "heatsink_6.vtm", "time" : 6 },
+    { "name" : "heatsink_7.vtm", "time" : 7 },
+    { "name" : "heatsink_8.vtm", "time" : 8 },
+    { "name" : "heatsink_9.vtm", "time" : 9 },
+    { "name" : "heatsink_10.vtm", "time" : 10 }
+  ]
+}

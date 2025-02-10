@@ -1,0 +1,18 @@
+<?xml version='1.0'?>
+<!-- time='1' -->
+<VTKFile type='vtkMultiBlockDataSet' version='1.0' byte_order='LittleEndian' header_type='UInt64'>
+  <vtkMultiBlockDataSet>
+    <DataSet name='internal' file='heatsink_1/internal.vtu' />
+    <Block name='boundary'>
+      <DataSet name='inlet' file='heatsink_1/boundary/inlet.vtp' />
+      <DataSet name='outlet' file='heatsink_1/boundary/outlet.vtp' />
+      <DataSet name='heat_sink' file='heatsink_1/boundary/heat_sink.vtp' />
+      <DataSet name='walls' file='heatsink_1/boundary/walls.vtp' />
+    </Block>
+  </vtkMultiBlockDataSet>
+  <FieldData>
+    <DataArray type='Float32' Name='TimeValue' NumberOfTuples='1' format='ascii'>
+1
+    </DataArray>
+  </FieldData>
+</VTKFile>
