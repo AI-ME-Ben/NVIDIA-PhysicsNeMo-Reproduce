@@ -8,6 +8,12 @@ Nvidia modulus sym
 
 https://docs.nvidia.com/deeplearning/modulus/modulus-sym/index.html
 
+NVIDIA Modulus Sym Examples Supplemental Materials
+
+https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials
+
+
+-----------------------------------------------------------------------------------------------------------------
 Unlock the Future of Simulation with AI & Physics!
 
 Are you fascinated by fluid dynamics, heat transfer, electromagnetics, or computational simulations? Traditional numerical methods like CFD and FEM are powerful but computationally expensive. What if we could integrate AI to revolutionize these simulations?
