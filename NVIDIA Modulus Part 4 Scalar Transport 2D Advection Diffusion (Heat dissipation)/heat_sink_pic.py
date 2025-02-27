@@ -46,6 +46,12 @@ from modulus.sym.geometry import Parameterization, Parameter
 import scipy.interpolate
 import matplotlib.pyplot as plt
 from modulus.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
+import numpy as np
+import scipy.interpolate
+# Define custom class
+import numpy as np
+import scipy.interpolate
+import matplotlib.pyplot as plt
 
 # Define custom class
 class CustomValidatorPlotter(ValidatorPlotter):
@@ -57,26 +63,28 @@ class CustomValidatorPlotter(ValidatorPlotter):
         x, y = invar["x"][:, 0], invar["y"][:, 0]
         extent = (x.min(), x.max(), y.min(), y.max())
 
-        # Extract p, u, v, nu from true and predicted outputs
-        p_true, u_true, v_true, nu_true = (
+        # Extract p, u, v, nu, c from true and predicted outputs
+        p_true, u_true, v_true, nu_true, c_true = (
             true_outvar["p"][:, 0],
             true_outvar["u"][:, 0],
             true_outvar["v"][:, 0],
             true_outvar["nu"][:, 0],
+            true_outvar["c"][:, 0]*273.15,
         )
-        p_pred, u_pred, v_pred, nu_pred = (
+        p_pred, u_pred, v_pred, nu_pred, c_pred = (
             pred_outvar["p"][:, 0],
             pred_outvar["u"][:, 0],
             pred_outvar["v"][:, 0],
             pred_outvar["nu"][:, 0],
+            pred_outvar["c"][:, 0]*273.15,
         )
 
         # Interpolate all variables
         (
-            p_true, u_true, v_true, nu_true,
-            p_pred, u_pred, v_pred, nu_pred
-        ) = self.interpolate_output(
-            x, y, [p_true, u_true, v_true, nu_true, p_pred, u_pred, v_pred, nu_pred], extent
+            p_true, u_true, v_true, nu_true, c_true,
+            p_pred, u_pred, v_pred, nu_pred, c_pred
+        ) = CustomValidatorPlotter.interpolate_output(
+            x, y, [p_true, u_true, v_true, nu_true, c_true, p_pred, u_pred, v_pred, nu_pred, c_pred], extent
         )
 
         # Compute differences
@@ -84,35 +92,39 @@ class CustomValidatorPlotter(ValidatorPlotter):
         u_diff = u_true - u_pred
         v_diff = v_true - v_pred
         nu_diff = nu_true - nu_pred
+        c_diff = c_true - c_pred
 
         # Define color bar limits (ONLY for true and predicted values)
         colorbar_limits = {
-            "p": (-0.4, 1.7),
-            "u": (-0.3, 1.5),
-            "v": (-0.75, 0.25),
-            "nu": (0.0001, 0.0011),
+            "p": (-1, 9),
+            "u": (0, 2.2),
+            "v": (-1.2, 1.2),
+            "nu": (0.01, 0.04),
+            "c": (0, 55),  # 依照數據範圍調整
         }
 
-        # Create plot (4 rows, 3 columns) with updated size
-        f, axes = plt.subplots(4, 3, figsize=(20, 15), dpi=100)
-        plt.suptitle("Lid-driven cavity: PINN vs True Solution")
+        # Create plot (5 rows, 3 columns) with updated size
+        f, axes = plt.subplots(5, 3, figsize=(20, 10), dpi=100)
+        plt.suptitle("Heat sink 2D: PINN vs True Solution")
 
         # Titles and data
         titles = [
             "Modulus: p", "OpenFOAM: p", "Difference: p",
             "Modulus: u", "OpenFOAM: u", "Difference: u",
             "Modulus: v", "OpenFOAM: v", "Difference: v",
-            "Modulus: nu", "OpenFOAM: nu", "Difference: nu"
+            "Modulus: nu", "OpenFOAM: nu", "Difference: nu",
+            "Modulus: c", "OpenFOAM: c", "Difference: c",
         ]
         data = [
             p_pred, p_true, p_diff,
             u_pred, u_true, u_diff,
             v_pred, v_true, v_diff,
-            nu_pred, nu_true, nu_diff
+            nu_pred, nu_true, nu_diff,
+            c_pred, c_true, c_diff,
         ]
-        variables = ["p", "p", "None", "u", "u", "None", "v", "v", "None", "nu", "nu", "None"]
-
-
+        variables = ["p", "p", "None", "u", "u", "None", "v", "v", "None", "nu", "nu", "None", "c", "c", "None"]
+        
+            
         # Loop through subplots and apply limits (except for difference plots)
         for i, ax in enumerate(axes.flat):
             var = variables[i]  # Get variable type
@@ -131,23 +143,53 @@ class CustomValidatorPlotter(ValidatorPlotter):
 
         return [(f, "custom_plot")]
 
+    # Define heat sink mask (adjust based on actual domain)
+    @staticmethod
+    def heat_sink_mask(xi, yi):
+        """Returns a boolean mask where heat sink regions should be set to NaN"""
+        mask = np.zeros_like(xi, dtype=bool)  # 確保 mask 是 (100, 100)
+    
+        heat_sink_x = -1  # Heat sink X position
+        heat_sink_y_start = -0.3  # First fin Y position
+        fin_thickness = 0.1
+        nr_fins = 3
+        gap = 0.15 + 0.1  # Fin spacing
+        length = 1.0  # Heat sink length
+    
+        for j in range(nr_fins):
+            fin_y = heat_sink_y_start + j * gap
+            mask |= ((xi >= heat_sink_x) & (xi <= heat_sink_x + length) &   
+                     (yi >= fin_y) & (yi <= fin_y + fin_thickness))
+    
+        return mask  # 應該返回與 xi/yi 相同的 (100,100) 形狀
+
     @staticmethod
     def interpolate_output(x, y, values, extent):
-        "Interpolates irregular points onto a mesh"
-
-        # Define mesh to interpolate onto
-        xyi = np.meshgrid(
+        """Interpolates irregular points onto a mesh"""
+        xi, yi = np.meshgrid(
             np.linspace(extent[0], extent[1], 100),
             np.linspace(extent[2], extent[3], 100),
             indexing="ij",
         )
-
-        # Linearly interpolate points onto mesh
+    
+        # 計算 mask，確保與 xi, yi 一致
+        mask = CustomValidatorPlotter.heat_sink_mask(xi, yi)  # 應該返回 (100, 100)
+    
+        # 進行插值
         interpolated_values = [
-            scipy.interpolate.griddata((x, y), value, tuple(xyi)) for value in values
+            scipy.interpolate.griddata((x, y), value, (xi, yi), method='linear') for value in values
         ]
-
+    
+        # 替換 NaN，防止插值失敗
+        interpolated_values = [np.nan_to_num(val, nan=np.nan) for val in interpolated_values]
+    
+        # 應用 NaN 遮罩
+        for i in range(len(interpolated_values)):
+            interpolated_values[i][mask] = np.nan
+    
         return interpolated_values
+
+
 @modulus.sym.main(config_path="conf", config_name="config")
 def run(cfg: ModulusConfig) -> None:
     # params for domain
@@ -344,13 +386,15 @@ def run(cfg: ModulusConfig) -> None:
         openfoam_outvar_numpy = {
             key: value
             for key, value in openfoam_var.items()
-            if key in ["u", "v", "nu" , "p", "c"]  # Removing "nu"
+            if key in ["u", "v", "nu" , "p", "c"]  # add "nu"
         }
         openfoam_validator = PointwiseValidator(
             nodes=nodes,
             invar=openfoam_invar_numpy,
             true_outvar=openfoam_outvar_numpy,
-            plotter=CustomValidatorPlotter(),
+            plotter=CustomValidatorPlotter(), # add
+            batch_size=1024,# add
+            requires_grad=True,# add
         )
         domain.add_validator(openfoam_validator)
     else:
