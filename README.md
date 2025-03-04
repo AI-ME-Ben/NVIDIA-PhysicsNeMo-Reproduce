@@ -1,19 +1,4 @@
 # NVIDIA-Modulus-Reproduce
-
-Youtube link
-
-https://www.youtube.com/watch?v=wvfPOJzvDx8&list=PL7rjQ6Lr_QuyNZY9PxICp4A6N4IhhPepr&pp=gAQB
-
-Nvidia modulus sym
-
-https://docs.nvidia.com/deeplearning/modulus/modulus-sym/index.html
-
-NVIDIA Modulus Sym Examples Supplemental Materials
-
-https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials
-
-![Overview](https://github.com/AI-ME-Ben/NVIDIA-Modulus-Reproduce/blob/main/images/part3.png?raw=true)
-
 -----------------------------------------------------------------------------------------------------------------
 Unlock the Future of Simulation with AI & Physics!
 
@@ -24,3 +9,13 @@ Enter Physics-Informed Neural Networks (PINNs)—an innovative approach that ble
 Join me as we explore PINNs, CFD, and physics-driven AI—from theory to real-world applications. Let’s push the boundaries of simulation together!
 
 #PINN #CFD #AI #FluidDynamics #HeatTransfer #Electromagnetics #NVIDIA #Modulus #Engineering
+-----------------------------------------------------------------------------------------------------------------
+Youtube link
+https://www.youtube.com/watch?v=wvfPOJzvDx8&list=PL7rjQ6Lr_QuyNZY9PxICp4A6N4IhhPepr&pp=gAQB
+Nvidia modulus sym
+https://docs.nvidia.com/deeplearning/modulus/modulus-sym/index.html
+NVIDIA Modulus Sym Examples Supplemental Materials
+https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials
+![Overview](https://github.com/AI-ME-Ben/NVIDIA-Modulus-Reproduce/blob/main/images/part3.png?raw=true)
+
+
