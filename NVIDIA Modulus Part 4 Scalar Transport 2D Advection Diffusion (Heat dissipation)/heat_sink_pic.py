@@ -46,12 +46,6 @@ from modulus.sym.geometry import Parameterization, Parameter
 import scipy.interpolate
 import matplotlib.pyplot as plt
 from modulus.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
-import numpy as np
-import scipy.interpolate
-# Define custom class
-import numpy as np
-import scipy.interpolate
-import matplotlib.pyplot as plt
 
 # Define custom class
 class CustomValidatorPlotter(ValidatorPlotter):
@@ -100,7 +94,7 @@ class CustomValidatorPlotter(ValidatorPlotter):
             "u": (0, 2.2),
             "v": (-1.2, 1.2),
             "nu": (0.01, 0.04),
-            "c": (0, 55),  # 依照數據範圍調整
+            "c": (0, 55),  
         }
 
         # Create plot (5 rows, 3 columns) with updated size
@@ -147,7 +141,7 @@ class CustomValidatorPlotter(ValidatorPlotter):
     @staticmethod
     def heat_sink_mask(xi, yi):
         """Returns a boolean mask where heat sink regions should be set to NaN"""
-        mask = np.zeros_like(xi, dtype=bool)  # 確保 mask 是 (100, 100)
+        mask = np.zeros_like(xi, dtype=bool)  
     
         heat_sink_x = -1  # Heat sink X position
         heat_sink_y_start = -0.3  # First fin Y position
@@ -161,7 +155,7 @@ class CustomValidatorPlotter(ValidatorPlotter):
             mask |= ((xi >= heat_sink_x) & (xi <= heat_sink_x + length) &   
                      (yi >= fin_y) & (yi <= fin_y + fin_thickness))
     
-        return mask  # 應該返回與 xi/yi 相同的 (100,100) 形狀
+        return mask  
 
     @staticmethod
     def interpolate_output(x, y, values, extent):
@@ -171,22 +165,18 @@ class CustomValidatorPlotter(ValidatorPlotter):
             np.linspace(extent[2], extent[3], 100),
             indexing="ij",
         )
-    
-        # 計算 mask，確保與 xi, yi 一致
-        mask = CustomValidatorPlotter.heat_sink_mask(xi, yi)  # 應該返回 (100, 100)
-    
-        # 進行插值
+        
+        mask = CustomValidatorPlotter.heat_sink_mask(xi, yi)
+        
         interpolated_values = [
             scipy.interpolate.griddata((x, y), value, (xi, yi), method='linear') for value in values
         ]
-    
-        # 替換 NaN，防止插值失敗
+        
         interpolated_values = [np.nan_to_num(val, nan=np.nan) for val in interpolated_values]
-    
-        # 應用 NaN 遮罩
+        
         for i in range(len(interpolated_values)):
             interpolated_values[i][mask] = np.nan
-    
+
         return interpolated_values
 
 

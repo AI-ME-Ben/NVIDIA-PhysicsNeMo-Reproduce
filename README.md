@@ -12,6 +12,7 @@ NVIDIA Modulus Sym Examples Supplemental Materials
 
 https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials
 
+![Overview](https://github.com/AI-ME-Ben/NVIDIA-Modulus-Reproduce/blob/main/images/part3.png?raw=true)
 
 -----------------------------------------------------------------------------------------------------------------
 Unlock the Future of Simulation with AI & Physics!
