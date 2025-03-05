@@ -52,22 +52,30 @@ import matplotlib.pyplot as plt
 from modulus.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
 
 # Define custom class
-class CustomValidatorPlotter(ValidatorPlotter):
+class fluidCustomValidatorPlotter(ValidatorPlotter):
 
     def __call__(self, invar, true_outvar, pred_outvar):
         "Custom plotting function for validator (only showing 'c')"
 
-        # Get input variables
-        x, y , z= invar["x"][:, 0], invar["y"][:, 0], invar["z"][:, 0],
-        #extent = (x.min(), x.max(), y.min(), y.max
-        extent = (-0.5, -0.5, y.min(), y.max(), z.min(), z.max())  
+        # Filter data for x = -0.5
+        mask = np.isclose(invar["x"][:, 0], -0.5)
+        y, z = invar["y"][mask, 0], invar["z"][mask, 0]
+        c_true = true_outvar["theta_f"][mask, 0] * 273.15
+        c_pred = pred_outvar["theta_f"][mask, 0] * 273.15
 
-        # Extract 'c' from true and predicted outputs (convert to Celsius)
-        c_true = true_outvar["theta_f"][:, 0] * 273.15
-        c_pred = pred_outvar["theta_f"][:, 0] * 273.15
+        # Calculate extent and ensure the ranges are not identical
+        y_min, y_max = y.min(), y.max()
+        z_min, z_max = z.min(), z.max()
+        if y_min == y_max:
+            y_min -= 1e-5
+            y_max += 1e-5
+        if z_min == z_max:
+            z_min -= 1e-5
+            z_max += 1e-5
+        extent = (z_min, z_max, y_min, y_max)
 
         # Interpolate 'c' values
-        c_true, c_pred = CustomValidatorPlotter.interpolate_output(
+        c_true, c_pred = fluidCustomValidatorPlotter.interpolate_output(
             y, z, [c_true, c_pred], extent
         )
 
@@ -75,7 +83,7 @@ class CustomValidatorPlotter(ValidatorPlotter):
         c_diff = c_true - c_pred
 
         # Define color bar limits
-        colorbar_limits = (15, 50)  # Celsius temperature range
+        colorbar_limits = (19.5, 44)  # Celsius temperature range
 
         # Create plot (1 row, 3 columns)
         f, axes = plt.subplots(1, 3, figsize=(15, 5), dpi=100)
@@ -94,44 +102,49 @@ class CustomValidatorPlotter(ValidatorPlotter):
                 im = ax.imshow(data[i].T, origin="lower", extent=extent, cmap="jet")
 
             ax.set_title(titles[i])
-            ax.set_xlabel("x")
+            ax.set_xlabel("z")
             ax.set_ylabel("y")
             plt.colorbar(im, ax=ax)
 
-        plt.tight_layout()
+        plt.tight_layout(pad=2.0)  # Adjust padding
 
         return [(f, "custom_plot")]
 
     @staticmethod
-    def heat_sink_mask(xi, yi):
+    def heat_sink_mask(yi, zi):
         """Returns a boolean mask where heat sink regions should be set to NaN"""
-        mask = np.zeros_like(xi, dtype=bool)  
+        mask = np.zeros_like(yi, dtype=bool)  
 
-        heat_sink_x = -0.5  # Heat sink X position
         heat_sink_y_start = -0.5  # First fin Y position
         heat_sink_z_start = -0.3  # First fin Z position
         fin_thickness = 0.1
-        nr_fins = 3
-        gap = 0.15 + 0.1  # Fin spacing
-        length = 1.0  # Heat sink length
+        fin_length = 0.6
+        gap = 0.15
+        base_y_start = -0.5
+        base_z_start = -0.3
+        base_y_end = -0.3
+        base_z_end = 0.3
 
-        for j in range(nr_fins):
-            fin_y = heat_sink_y_start + j * gap
-            mask |= ((xi >= heat_sink_x) & (xi <= heat_sink_x + length) &   
-                     (yi >= fin_y) & (yi <= fin_y + fin_thickness))
-
+        # Mask for the three fins
+        for i in range(3):
+            fin_z_start = heat_sink_z_start + i * (fin_thickness + gap)
+            fin_z_end = fin_z_start + fin_thickness
+            mask |= ((yi >= heat_sink_y_start) & (yi <= heat_sink_y_start + fin_length) & 
+                     (zi >= fin_z_start) & (zi <= fin_z_end))
+        # Mask for the base
+        mask |= ((yi >= base_y_start) & (yi <= base_y_end) & (zi >= base_z_start) & (zi <= base_z_end))
         return mask  
 
     @staticmethod
     def interpolate_output(y, z, values, extent):
         """Interpolates irregular points onto a mesh"""
-        yi, zi = np.meshgrid(
+        zi, yi = np.meshgrid(
+            np.linspace(extent[0], extent[1], 100),
             np.linspace(extent[2], extent[3], 100),
-            np.linspace(extent[4], extent[5], 100),
-            indexing="jk",
+            indexing="ij",
         )
         
-        mask = CustomValidatorPlotter.heat_sink_mask(yi, zi)
+        mask = fluidCustomValidatorPlotter.heat_sink_mask(yi, zi)
         
         interpolated_values = [
             scipy.interpolate.griddata((y, z), value, (yi, zi), method='linear') for value in values
@@ -312,7 +325,7 @@ def run(cfg: ModulusConfig) -> None:
     thermal_domain.add_constraint(solid_interior, "solid_interior")
 
     # flow validation data
-    file_path = "../openfoam/"
+    file_path = "openfoam/"
     if os.path.exists(to_absolute_path(file_path)):
         mapping = {
             "Points:0": "x",
@@ -375,7 +388,7 @@ def run(cfg: ModulusConfig) -> None:
             nodes=thermal_nodes,
             invar=openfoam_invar_numpy,
             true_outvar=openfoam_thermal_outvar_numpy,
-            plotter=CustomValidatorPlotter(), # add
+            plotter=fluidCustomValidatorPlotter(), # add
             batch_size=1024,# add
             requires_grad=True,# add
         )
