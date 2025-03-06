@@ -49,70 +49,15 @@ from three_fin_geometry import *
 
 import scipy.interpolate
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from modulus.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# Define custom class
-class fluidCustomValidatorPlotter(ValidatorPlotter):
-
-    def __call__(self, invar, true_outvar, pred_outvar):
-        "Custom plotting function for validator (only showing 'c')"
-
-        # Filter data for x = -0.5
-        mask = np.isclose(invar["x"][:, 0], -0.5)
-        y, z = invar["y"][mask, 0], invar["z"][mask, 0]
-        c_true = true_outvar["theta_f"][mask, 0] * 273.15
-        c_pred = pred_outvar["theta_f"][mask, 0] * 273.15
-
-        # Calculate extent and ensure the ranges are not identical
-        y_min, y_max = y.min(), y.max()
-        z_min, z_max = z.min(), z.max()
-        if y_min == y_max:
-            y_min -= 1e-5
-            y_max += 1e-5
-        if z_min == z_max:
-            z_min -= 1e-5
-            z_max += 1e-5
-        extent = (z_min, z_max, y_min, y_max)
-
-        # Interpolate 'c' values
-        c_true, c_pred = fluidCustomValidatorPlotter.interpolate_output(
-            y, z, [c_true, c_pred], extent
-        )
-
-        # Compute difference
-        c_diff = c_true - c_pred
-
-        # Define color bar limits
-        colorbar_limits = (19.5, 44)  # Celsius temperature range
-
-        # Create plot (1 row, 3 columns)
-        f, axes = plt.subplots(1, 3, figsize=(15, 5), dpi=100)
-        plt.suptitle("Heat sink 3D: Temperature Comparison (Modulus vs OpenFOAM)")
-
-        # Titles and data
-        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
-        data = [c_pred, c_true, c_diff]
-
-        # Loop through subplots
-        for i, ax in enumerate(axes):
-            if i < 2:  # Apply fixed color limits to predicted & true values
-                im = ax.imshow(data[i].T, origin="lower", extent=extent, cmap="jet",
-                               vmin=colorbar_limits[0], vmax=colorbar_limits[1])
-            else:  # No fixed limits for difference plot
-                im = ax.imshow(data[i].T, origin="lower", extent=extent, cmap="jet")
-
-            ax.set_title(titles[i])
-            ax.set_xlabel("z")
-            ax.set_ylabel("y")
-            plt.colorbar(im, ax=ax)
-
-        plt.tight_layout(pad=2.0)  # Adjust padding
-
-        return [(f, "custom_plot")]
+class BaseValidatorPlotter(ValidatorPlotter):
 
     @staticmethod
-    def heat_sink_mask(yi, zi):
-        """Returns a boolean mask where heat sink regions should be set to NaN"""
+    def heat_sink_mask_zy(zi, yi):
+        """Returns a boolean mask where heat sink regions should be set to NaN for y-z plane"""
         mask = np.zeros_like(yi, dtype=bool)  
 
         heat_sink_y_start = -0.5  # First fin Y position
@@ -136,18 +81,31 @@ class fluidCustomValidatorPlotter(ValidatorPlotter):
         return mask  
 
     @staticmethod
-    def interpolate_output(y, z, values, extent):
+    def heat_sink_mask_xy(xi, yi):
+        """Returns a boolean mask where heat sink regions should be set to NaN for x-y plane"""
+        mask = np.zeros_like(xi, dtype=bool)  
+
+        heat_sink_x_start = -1  # First fin X position
+        heat_sink_y_start = -0.5  # First fin Y position
+        heat_sink_x_end = 0  # End fin X position
+        heat_sink_y_end = 0.1  # End fin Y position
+
+        # Mask
+        mask |= ((xi >= heat_sink_x_start) & (xi <= heat_sink_x_end) & 
+                 (yi >= heat_sink_y_start) & (yi <= heat_sink_y_end))
+        return mask  
+
+    @staticmethod
+    def interpolate_output(x, y, values, extent, mask):
         """Interpolates irregular points onto a mesh"""
-        zi, yi = np.meshgrid(
+        xi, yi = np.meshgrid(
             np.linspace(extent[0], extent[1], 100),
             np.linspace(extent[2], extent[3], 100),
             indexing="ij",
         )
         
-        mask = fluidCustomValidatorPlotter.heat_sink_mask(yi, zi)
-        
         interpolated_values = [
-            scipy.interpolate.griddata((y, z), value, (yi, zi), method='linear') for value in values
+            scipy.interpolate.griddata((x, y), value, (xi, yi), method='linear') for value in values
         ]
         
         interpolated_values = [np.nan_to_num(val, nan=np.nan) for val in interpolated_values]
@@ -156,6 +114,128 @@ class fluidCustomValidatorPlotter(ValidatorPlotter):
             interpolated_values[i][mask] = np.nan
 
         return interpolated_values
+
+    def plot(self, x, y, c_true, c_pred, extent, colorbar_limits, titles, mask_func, mask_inverted=False, ax=None):
+        """Creates the plot for the given data"""
+        xi, yi = np.meshgrid(
+            np.linspace(extent[0], extent[1], 100),
+            np.linspace(extent[2], extent[3], 100),
+            indexing="ij",
+        )
+        mask = mask_func(xi, yi)
+        if mask_inverted:
+            mask = ~mask  # Invert the mask if needed
+        c_true, c_pred = self.interpolate_output(x, y, [c_true, c_pred], extent, mask)
+
+        # Compute difference
+        c_diff = c_true - c_pred
+
+        # Data for subplots
+        data = [c_pred, c_true, c_diff]
+
+        # Loop through subplots
+        for i in range(3):
+            if i < 2:  # Apply fixed color limits to predicted & true values
+                im = ax[i].imshow(data[i].T, origin="lower", extent=extent, cmap="jet",
+                                  vmin=colorbar_limits[0], vmax=colorbar_limits[1])
+            else:  # No fixed limits for difference plot
+                im = ax[i].imshow(data[i].T, origin="lower", extent=extent, cmap="jet")
+
+            ax[i].set_title(titles[i])
+            ax[i].set_xlabel("z" if mask_func == self.heat_sink_mask_zy else "x")
+            ax[i].set_ylabel("y")
+
+            # Create a colorbar with the same height as the plot
+            divider = make_axes_locatable(ax[i])
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = plt.colorbar(im, cax=cax)
+            cbar.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=5, integer=True))  # Set colorbar ticks to integers with fewer bins
+
+class fluidCustomValidatorPlotter(BaseValidatorPlotter):
+
+    def plot_zy(self, invar, true_outvar, pred_outvar, axes):
+        "Custom plotting function for validator (showing 'c' in y-z plane)"
+
+        # Filter data for x = -0.5
+        x_filter = np.isclose(invar["x"][:, 0], -0.5)
+        z, y = invar["z"][x_filter, 0], invar["y"][x_filter, 0]
+        c_true = true_outvar["theta_f"][x_filter, 0] * 273.15
+        c_pred = pred_outvar["theta_f"][x_filter, 0] * 273.15
+
+        # Define fixed extent
+        extent_zy = (-0.5, 0.5, -0.5, 0.5)
+
+        # Define color bar limits
+        colorbar_limits = (19.5, 44)  # Celsius temperature range
+
+        # Titles for subplots
+        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+
+        self.plot(z, y, c_true, c_pred, extent_zy, colorbar_limits, titles, self.heat_sink_mask_zy, mask_inverted=False, ax=axes)
+
+    def plot_xy(self, invar, true_outvar, pred_outvar, axes):
+        "Custom plotting function for validator (showing 'c' in x-y plane)"
+
+        # Filter data for z = 0
+        z_filter = np.isclose(invar["z"][:, 0], 0)
+        x, y = invar["x"][z_filter, 0], invar["y"][z_filter, 0]
+        c_true = true_outvar["theta_f"][z_filter, 0] * 273.15
+        c_pred = pred_outvar["theta_f"][z_filter, 0] * 273.15
+
+        # Define fixed extent
+        extent_xy = (-2.5, 2.5, -0.5, 0.5)
+
+        # Define color bar limits
+        colorbar_limits = (22, 42)  # Celsius temperature range
+
+        # Titles for subplots
+        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+
+        self.plot(x, y, c_true, c_pred, extent_xy, colorbar_limits, titles, self.heat_sink_mask_xy, mask_inverted=False, ax=axes)
+
+    def __call__(self, invar, true_outvar, pred_outvar):
+        """Generate both y-z and x-y plane plots in a 2x3 grid"""
+        f, axes = plt.subplots(2, 3, figsize=(18, 12), dpi=100)
+        plt.suptitle("Heat sink 3D: Temperature Comparison (Modulus vs OpenFOAM)")
+
+        # Plot z-y plane
+        self.plot_zy(invar, true_outvar, pred_outvar, axes[0, :])
+
+        # Plot x-y plane
+        self.plot_xy(invar, true_outvar, pred_outvar, axes[1, :])
+
+        plt.tight_layout(pad=2.0)  # Adjust padding
+
+        return [(f, "custom_plot")]
+
+class solidCustomValidatorPlotter(BaseValidatorPlotter):
+
+    def __call__(self, invar, true_outvar, pred_outvar):
+        "Custom plotting function for validator (showing 'c' and heat sink regions)"
+
+        # Filter data for x = -0.5
+        mask = np.isclose(invar["x"][:, 0], -0.5)
+        z, y = invar["z"][mask, 0], invar["y"][mask, 0]
+        c_true = true_outvar["theta_s"][mask, 0] * 273.15
+        c_pred = pred_outvar["theta_s"][mask, 0] * 273.15
+
+        # Define fixed extent
+        extent = (-0.5, 0.5, -0.5, 0.5)
+
+        # Define color bar limits
+        colorbar_limits = (20, 80)  # Celsius temperature range
+
+        # Titles for subplots
+        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+
+        f, axes = plt.subplots(1, 3, figsize=(18, 6), dpi=100)
+        plt.suptitle("Heat sink 3D: Temperature Comparison (Modulus vs OpenFOAM)")
+
+        self.plot(z, y, c_true, c_pred, extent, colorbar_limits, titles, self.heat_sink_mask_zy, mask_inverted=True, ax=axes)
+
+        plt.tight_layout(pad=2.0)  # Adjust padding
+
+        return [(f, "custom_plot")]
 
 @modulus.sym.main(config_path="conf", config_name="conf_thermal")
 def run(cfg: ModulusConfig) -> None:
@@ -442,7 +522,11 @@ def run(cfg: ModulusConfig) -> None:
         openfoam_solid_validator = PointwiseValidator(
             nodes=thermal_nodes,
             invar=openfoam_invar_solid_numpy,
-            true_outvar=openfoam_thermal_outvar_numpy,
+            #true_outvar=openfoam_thermal_outvar_numpy,
+            true_outvar=openfoam_outvar_solid_numpy,# modify?
+            plotter=solidCustomValidatorPlotter(), # add
+            batch_size=1024,# add
+            requires_grad=True,# add
         )
         thermal_domain.add_validator(
             openfoam_solid_validator,
