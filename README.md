@@ -4,7 +4,7 @@ Youtube link
 
 https://www.youtube.com/watch?v=wvfPOJzvDx8&list=PL7rjQ6Lr_QuyNZY9PxICp4A6N4IhhPepr&pp=gAQB
 
-Nvidia modulus sym
+NVIDIA Modulus Sym 
 
 https://docs.nvidia.com/deeplearning/modulus/modulus-sym/index.html
 
