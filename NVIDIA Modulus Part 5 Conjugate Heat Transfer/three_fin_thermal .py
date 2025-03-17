@@ -74,10 +74,10 @@ class BaseValidatorPlotter(ValidatorPlotter):
         for i in range(3):
             fin_z_start = heat_sink_z_start + i * (fin_thickness + gap)
             fin_z_end = fin_z_start + fin_thickness
-            mask |= ((yi >= heat_sink_y_start) & (yi <= heat_sink_y_start + fin_length) & 
-                     (zi >= fin_z_start) & (zi <= fin_z_end))
+            mask |= ((yi > heat_sink_y_start) & (yi < heat_sink_y_start + fin_length) & 
+                     (zi > fin_z_start) & (zi < fin_z_end))
         # Mask for the base
-        mask |= ((yi >= base_y_start) & (yi <= base_y_end) & (zi >= base_z_start) & (zi <= base_z_end))
+        mask |= ((yi > base_y_start) & (yi < base_y_end) & (zi > base_z_start) & (zi < base_z_end))
         return mask  
 
     @staticmethod
@@ -91,8 +91,8 @@ class BaseValidatorPlotter(ValidatorPlotter):
         heat_sink_y_end = 0.1  # End fin Y position
 
         # Mask
-        mask |= ((xi >= heat_sink_x_start) & (xi <= heat_sink_x_end) & 
-                 (yi >= heat_sink_y_start) & (yi <= heat_sink_y_end))
+        mask |= ((xi > heat_sink_x_start) & (xi < heat_sink_x_end) & 
+                 (yi > heat_sink_y_start) & (yi < heat_sink_y_end))
         return mask  
 
     @staticmethod
@@ -157,7 +157,9 @@ class fluidCustomValidatorPlotter(BaseValidatorPlotter):
         "Custom plotting function for validator (showing 'c' in y-z plane)"
 
         # Filter data for x = -0.5
-        x_filter = np.isclose(invar["x"][:, 0], -0.5)
+        #x_filter = np.isclose(invar["x"][:, 0], -0.5)
+        x_values = invar["x"][:, 0]
+        x_filter = (x_values > -0.51) & (x_values < -0.49)
         z, y = invar["z"][x_filter, 0], invar["y"][x_filter, 0]
         c_true = true_outvar["theta_f"][x_filter, 0] * 273.15
         c_pred = pred_outvar["theta_f"][x_filter, 0] * 273.15
@@ -177,7 +179,9 @@ class fluidCustomValidatorPlotter(BaseValidatorPlotter):
         "Custom plotting function for validator (showing 'c' in x-y plane)"
 
         # Filter data for z = 0
-        z_filter = np.isclose(invar["z"][:, 0], 0)
+        #z_filter = np.isclose(invar["z"][:, 0], 0.01)
+        z_values = invar["z"][:, 0]
+        z_filter = (z_values > -0.01) & (z_values < 0.01)
         x, y = invar["x"][z_filter, 0], invar["y"][z_filter, 0]
         c_true = true_outvar["theta_f"][z_filter, 0] * 273.15
         c_pred = pred_outvar["theta_f"][z_filter, 0] * 273.15
