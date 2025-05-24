@@ -1,4 +1,4 @@
-# NVIDIA-Modulus-Reproduce
+# NVIDIA-PhysicsNemo-Reproduce
 
 Youtube link
 
