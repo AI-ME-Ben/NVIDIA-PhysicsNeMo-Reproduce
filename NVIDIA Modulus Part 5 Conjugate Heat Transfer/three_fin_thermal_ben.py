@@ -23,7 +23,7 @@ import itertools
 import numpy as np
 
 import physicsnemo.sym
-from physicsnemo.sym.hydra.config import PhysicsnemoConfig
+from physicsnemo.sym.hydra.config import PhysicsNeMoConfig
 from physicsnemo.sym.hydra import to_absolute_path, instantiate_arch
 from physicsnemo.sym.utils.io import csv_to_dict
 from physicsnemo.sym.solver import Solver
