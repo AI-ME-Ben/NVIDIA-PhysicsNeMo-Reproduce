@@ -22,35 +22,35 @@ from sympy import Symbol, Eq, Abs, tanh, Or, And
 import itertools
 import numpy as np
 
-import modulus.sym
-from modulus.sym.hydra.config import ModulusConfig
-from modulus.sym.hydra import to_absolute_path, instantiate_arch
-from modulus.sym.utils.io import csv_to_dict
-from modulus.sym.solver import Solver
-from modulus.sym.domain import Domain
-from modulus.sym.geometry.primitives_3d import Box, Channel, Plane
-from modulus.sym.models.fully_connected import FullyConnectedArch
-from modulus.sym.domain.constraint import (
+import physicsnemo.sym
+from physicsnemo.sym.hydra.config import PhysicsnemoConfig
+from physicsnemo.sym.hydra import to_absolute_path, instantiate_arch
+from physicsnemo.sym.utils.io import csv_to_dict
+from physicsnemo.sym.solver import Solver
+from physicsnemo.sym.domain import Domain
+from physicsnemo.sym.geometry.primitives_3d import Box, Channel, Plane
+from physicsnemo.sym.models.fully_connected import FullyConnectedArch
+from physicsnemo.sym.domain.constraint import (
     PointwiseBoundaryConstraint,
     PointwiseInteriorConstraint,
     IntegralBoundaryConstraint,
 )
-from modulus.sym.domain.validator import PointwiseValidator
-from modulus.sym.domain.inferencer import PointwiseInferencer
-from modulus.sym.domain.monitor import PointwiseMonitor
-from modulus.sym.key import Key
-from modulus.sym.node import Node
-from modulus.sym.eq.pdes.navier_stokes import NavierStokes
-from modulus.sym.eq.pdes.basic import NormalDotVec, GradNormal
-from modulus.sym.eq.pdes.diffusion import Diffusion, DiffusionInterface
-from modulus.sym.eq.pdes.advection_diffusion import AdvectionDiffusion
+from physicsnemo.sym.domain.validator import PointwiseValidator
+from physicsnemo.sym.domain.inferencer import PointwiseInferencer
+from physicsnemo.sym.domain.monitor import PointwiseMonitor
+from physicsnemo.sym.key import Key
+from physicsnemo.sym.node import Node
+from physicsnemo.sym.eq.pdes.navier_stokes import NavierStokes
+from physicsnemo.sym.eq.pdes.basic import NormalDotVec, GradNormal
+from physicsnemo.sym.eq.pdes.diffusion import Diffusion, DiffusionInterface
+from physicsnemo.sym.eq.pdes.advection_diffusion import AdvectionDiffusion
 
 from three_fin_geometry import *
 
 import scipy.interpolate
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from modulus.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
+from physicsnemo.sym.utils.io.plotter import ValidatorPlotter, InferencerPlotter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class BaseValidatorPlotter(ValidatorPlotter):
@@ -171,7 +171,7 @@ class fluidCustomValidatorPlotter(BaseValidatorPlotter):
         colorbar_limits = (19.5, 44)  # Celsius temperature range
 
         # Titles for subplots
-        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+        titles = ["physicsnemo: T", "OpenFOAM: T", "Difference: T"]
 
         self.plot(z, y, c_true, c_pred, extent_zy, colorbar_limits, titles, self.heat_sink_mask_zy, mask_inverted=False, ax=axes)
 
@@ -193,14 +193,14 @@ class fluidCustomValidatorPlotter(BaseValidatorPlotter):
         colorbar_limits = (22, 42)  # Celsius temperature range
 
         # Titles for subplots
-        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+        titles = ["physicsnemo: T", "OpenFOAM: T", "Difference: T"]
 
         self.plot(x, y, c_true, c_pred, extent_xy, colorbar_limits, titles, self.heat_sink_mask_xy, mask_inverted=False, ax=axes)
 
     def __call__(self, invar, true_outvar, pred_outvar):
         """Generate both y-z and x-y plane plots in a 2x3 grid"""
         f, axes = plt.subplots(2, 3, figsize=(18, 12), dpi=100)
-        plt.suptitle("Heat sink 3D: Temperature Comparison (Modulus vs OpenFOAM)")
+        plt.suptitle("Heat sink 3D: Temperature Comparison (physicsnemo vs OpenFOAM)")
 
         # Plot z-y plane
         self.plot_zy(invar, true_outvar, pred_outvar, axes[0, :])
@@ -230,10 +230,10 @@ class solidCustomValidatorPlotter(BaseValidatorPlotter):
         colorbar_limits = (20, 80)  # Celsius temperature range
 
         # Titles for subplots
-        titles = ["Modulus: T", "OpenFOAM: T", "Difference: T"]
+        titles = ["physicsnemo: T", "OpenFOAM: T", "Difference: T"]
 
         f, axes = plt.subplots(1, 3, figsize=(18, 6), dpi=100)
-        plt.suptitle("Heat sink 3D: Temperature Comparison (Modulus vs OpenFOAM)")
+        plt.suptitle("Heat sink 3D: Temperature Comparison (physicsnemo vs OpenFOAM)")
 
         self.plot(z, y, c_true, c_pred, extent, colorbar_limits, titles, self.heat_sink_mask_zy, mask_inverted=True, ax=axes)
 
@@ -241,8 +241,8 @@ class solidCustomValidatorPlotter(BaseValidatorPlotter):
 
         return [(f, "custom_plot")]
 
-@modulus.sym.main(config_path="conf", config_name="conf_thermal")
-def run(cfg: ModulusConfig) -> None:
+@physicsnemo.sym.main(config_path="conf", config_name="conf_thermal")
+def run(cfg: physicsnemoConfig) -> None:
     # make thermal equations
     ad = AdvectionDiffusion(T="theta_f", rho=1.0, D=0.02, dim=3, time=False)
     dif = Diffusion(T="theta_s", D=0.0625, dim=3, time=False)
@@ -538,7 +538,7 @@ def run(cfg: ModulusConfig) -> None:
         )
     else:
         warnings.warn(
-            f"Directory {file_path} does not exist. Will skip adding validators. Please download the additional files from NGC https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials"
+            f"Directory {file_path} does not exist. Will skip adding validators. Please download the additional files from NGC https://catalog.ngc.nvidia.com/orgs/nvidia/teams/physicsnemo/resources/physicsnemo_sym_examples_supplemental_materials"
         )
     # add peak temp monitors for design optimization
     # run only for parameterized cases and in eval mode
