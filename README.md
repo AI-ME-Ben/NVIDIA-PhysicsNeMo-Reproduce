@@ -4,11 +4,11 @@ Youtube link
 
 https://www.youtube.com/watch?v=wvfPOJzvDx8&list=PL7rjQ6Lr_QuyNZY9PxICp4A6N4IhhPepr&pp=gAQB
 
-NVIDIA Modulus Sym 
+NVIDIA PhysicsNemo Sym 
 
 https://docs.nvidia.com/deeplearning/modulus/modulus-sym/index.html
 
-NVIDIA Modulus Sym Examples Supplemental Materials
+NVIDIA PhysicsNemo Sym Examples Supplemental Materials
 
 https://catalog.ngc.nvidia.com/orgs/nvidia/teams/modulus/resources/modulus_sym_examples_supplemental_materials
 
