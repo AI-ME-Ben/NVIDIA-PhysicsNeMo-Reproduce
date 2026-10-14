@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 - 2026 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Position-only one-shot MeshGraphNet on the OpenRadioss bumper beam, for the
+# three-model comparison (GeoTransolver / MeshGraphNet / DI-GNN), Part 9 of
+# BUMPER_BEAM_REPRODUCTION.md.
+# Usage: python train.py --config-name=bumper_mgn_oneshot
+
+hydra:
+  job:
+    chdir: True
+  run:
+    dir: ./outputs_mgn/
+
+experiment_name: "Bumper-OpenRadioss-MeshGraphNet"
+
+defaults:
+  - reader: vtp
+  - datapipe: graph
+  - model: mgn_one_shot
+  - training: default
+  - inference: default
+  - _self_
+
+training:
+  raw_data_dir: ${hydra:runtime.cwd}/data_full/vtk/train
+  raw_data_dir_validation: ${hydra:runtime.cwd}/data_full/vtk/val
+  global_features_filepath: ${hydra:runtime.cwd}/dataset_generation/global_features.json
+  num_time_steps: 51
+  num_training_samples: 121
+  num_validation_samples: 5
+  epochs: 500
+  validation_freq: 25
+  save_checkpoint_freq: 50
+  num_dataloader_workers: 0
+  optimizer: muon
+
+inference:
+  raw_data_dir_test: ${hydra:runtime.cwd}/data_full/vtk/test
+
+datapipe:
+  static_features: []
+  dynamic_targets: []          # position only (same as the position-only GeoTransolver)
+  global_features:
+    - velocity_x
+    - thickness_scale
+    - rwall_origin_y
+  sample_type: all_time_steps
+
+model:
+  input_dim_nodes: 6   # coords (3) + 3 global features (broadcast to every node)
+  input_dim_edges: 4   # dx, dy, dz, |d| from the graph datapipe
+  output_dim: 150      # 50 * 3 positions

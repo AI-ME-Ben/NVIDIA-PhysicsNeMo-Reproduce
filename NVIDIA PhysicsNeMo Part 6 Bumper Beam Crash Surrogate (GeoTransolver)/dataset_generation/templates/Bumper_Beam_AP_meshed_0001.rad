@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2022 Altair Engineering Inc. ("Holder")
+# Model is licensed by Holder under CC BY-NC 4.0
+# (https://creativecommons.org/licenses/by-nc/4.0/legalcode).
+/RUN/Bumper_Beam_AP_meshed/0/
+                 100
+/VERS/2022
+/ANIM/DT
+#   TSTART     TFREQ
+0.000000 2.000000
+/ANIM/SHELL/VONM
+/ANIM/SHELL/EPSP
+/DT/NODA/CST/0
+0.9 0.001
+/PRINT/-100/55
+/TFILE/0
+#            dT_HIS
+0.100000

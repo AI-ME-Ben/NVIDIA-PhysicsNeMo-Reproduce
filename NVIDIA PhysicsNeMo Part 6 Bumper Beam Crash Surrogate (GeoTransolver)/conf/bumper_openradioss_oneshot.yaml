@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 - 2026 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Bumper beam crash experiment, self-generated with OpenRadioss + PhysicsNeMo-Curator
+# (see examples/structural_mechanics/bumper_beam/dataset_generation/).
+# stress_vm / effective_plastic_strain are NOT extracted by the curator's
+# D3PlotSource (it drops these ANIM state variables during the anim->d3plot
+# conversion). They are instead read directly from the anim_to_vtk .vtk
+# frames (2DELEM_Von_Mises / 2DELEM_Plastic_Strain cell data, joined to the
+# curated mesh by ELEMENT_ID) and injected into each run's VTP as
+# cell_stress_vm_t*/cell_effective_plastic_strain_t* cell-data arrays — see
+# dataset_generation/templates/_inject_stress_strain.py.
+# Usage: python train.py --config-name=bumper_openradioss_oneshot
+
+hydra:
+  job:
+    chdir: True
+  run:
+    dir: ./outputs/
+
+experiment_name: "Bumper-OpenRadioss-GeoTransolver"
+
+defaults:
+  - reader: vtp
+  - datapipe: point_cloud
+  - model: geotransolver_one_shot
+  - training: default
+  - inference: default
+  - _self_
+
+# ┌───────────────────────────────────────────┐
+# │                   Data                    │
+# └───────────────────────────────────────────┘
+
+training:
+  raw_data_dir: ???              # set via CLI: training.raw_data_dir=/path/to/train
+  raw_data_dir_validation: ???   # set via CLI: training.raw_data_dir_validation=/path/to/validation
+  global_features_filepath: ???  # set via CLI: training.global_features_filepath=/path/to/global_features.json
+  optimizer: muon
+
+  # ┌───────────────────────────────────────────┐
+  # │                 Dataset                   │
+  # └───────────────────────────────────────────┘
+
+  num_time_steps: 51             # ANIM/DT TFREQ=2ms over a 100ms run -> 51 frames
+  num_training_samples: ???      # set via CLI
+  num_validation_samples: ???    # set via CLI
+  # Windows: the dataset uses a lambda that torch's spawn-based DataLoader
+  # workers cannot pickle. 0 = load in the main process (safe on all OSes).
+  # On Linux you can raise this (e.g. 8) for faster data loading.
+  num_dataloader_workers: 0
+
+inference:
+  raw_data_dir_test: ???         # set via CLI: inference.raw_data_dir_test=/path/to/test
+
+# ┌───────────────────────────────────────────┐
+# │            Datapipe features              │
+# └───────────────────────────────────────────┘
+
+datapipe:
+  static_features: []          # thickness is written by the curator but unused here
+  dynamic_targets:
+    - effective_plastic_strain
+    - stress_vm
+  global_features:
+    - velocity_x
+    - thickness_scale
+    - rwall_origin_y
+  sample_type: all_time_steps
+
+# ┌───────────────────────────────────────────┐
+# │            Model overrides                │
+# └───────────────────────────────────────────┘
+
+model:
+  functional_dim: 3    # coords (3)
+  out_dim: 250          # (num_time_steps - 1) * Fo = 50 * 5 (3 pos + 1 plastic strain + 1 stress_vm)
+  global_dim: 3         # must match len(datapipe.global_features)
